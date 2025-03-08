@@ -1,0 +1,184 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 商品マスタ
+model Item {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique
+  name        String
+  description String?
+  itemType    ItemType
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // リレーション
+  itemUnits        ItemUnit[]
+  lots             Lot[]
+  monthlyInventory MonthlyInventory[]
+}
+
+// 単位マスタ
+model Unit {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // リレーション
+  itemUnits            ItemUnit[]
+  inventory            Inventory[]
+  inventoryTransaction InventoryTransaction[]
+  monthlyInventory     MonthlyInventory[]
+  allocation           Allocation[]
+}
+
+// 商品単位マッピング
+model ItemUnit {
+  id             Int      @id @default(autoincrement())
+  itemId         Int
+  unitId         Int
+  conversionRate Float    @default(1.0)
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // リレーション
+  item Item @relation(fields: [itemId], references: [id])
+  unit Unit @relation(fields: [unitId], references: [id])
+
+  @@unique([itemId, unitId])
+}
+
+// 倉庫マスタ
+model Warehouse {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique
+  name        String
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // リレーション
+  inventory            Inventory[]
+  inventoryTransaction InventoryTransaction[]
+  monthlyInventory     MonthlyInventory[]
+  allocation           Allocation[]
+}
+
+// ロットマスタ
+model Lot {
+  id             Int       @id @default(autoincrement())
+  lotNumber      String    @unique
+  itemId         Int
+  productionDate DateTime
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // リレーション
+  item                 Item                  @relation(fields: [itemId], references: [id])
+  inventory            Inventory[]
+  inventoryTransaction InventoryTransaction[]
+  monthlyInventory     MonthlyInventory[]
+  allocation           Allocation[]
+}
+
+// 在庫
+model Inventory {
+  id          Int      @id @default(autoincrement())
+  lotId       Int
+  warehouseId Int
+  quantity    Float
+  unitId      Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // リレーション
+  lot       Lot       @relation(fields: [lotId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  unit      Unit      @relation(fields: [unitId], references: [id])
+
+  @@unique([lotId, warehouseId, unitId])
+}
+
+// 入出庫トランザクション
+model InventoryTransaction {
+  id              Int              @id @default(autoincrement())
+  transactionType TransactionType
+  lotId           Int
+  warehouseId     Int
+  quantity        Float
+  unitId          Int
+  transactionDate DateTime
+  referenceNumber String?
+  barcodeData     String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  // リレーション
+  lot       Lot       @relation(fields: [lotId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  unit      Unit      @relation(fields: [unitId], references: [id])
+}
+
+// 月次在庫
+model MonthlyInventory {
+  id               Int      @id @default(autoincrement())
+  itemId           Int
+  lotId            Int
+  warehouseId      Int
+  openingQuantity  Float
+  incomingQuantity Float
+  outgoingQuantity Float
+  closingQuantity  Float
+  unitId           Int
+  month            DateTime
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // リレーション
+  item      Item      @relation(fields: [itemId], references: [id])
+  lot       Lot       @relation(fields: [lotId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  unit      Unit      @relation(fields: [unitId], references: [id])
+
+  @@unique([itemId, lotId, warehouseId, unitId, month])
+}
+
+// 在庫引当
+model Allocation {
+  id              Int      @id @default(autoincrement())
+  lotId           Int
+  warehouseId     Int
+  quantity        Float
+  unitId          Int
+  referenceNumber String?
+  allocationDate  DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // リレーション
+  lot       Lot       @relation(fields: [lotId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  unit      Unit      @relation(fields: [unitId], references: [id])
+}
+
+// 列挙型
+enum ItemType {
+  MANUFACTURED // 製造品
+  EXTERNAL     // 社外品
+  RAW_MATERIAL // 原材料
+}
+
+enum TransactionType {
+  INBOUND  // 入庫
+  OUTBOUND // 出庫
+}
