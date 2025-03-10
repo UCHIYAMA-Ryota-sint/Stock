@@ -15,7 +15,7 @@ model Item {
   code        String    @unique
   name        String
   description String?
-  itemType    ItemType
+  itemType    String    // "MANUFACTURED", "EXTERNAL", "RAW_MATERIAL"
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -111,8 +111,8 @@ model Inventory {
 
 // 入出庫トランザクション
 model InventoryTransaction {
-  id              Int              @id @default(autoincrement())
-  transactionType TransactionType
+  id              Int      @id @default(autoincrement())
+  transactionType String   // "INBOUND", "OUTBOUND"
   lotId           Int
   warehouseId     Int
   quantity        Float
@@ -120,8 +120,8 @@ model InventoryTransaction {
   transactionDate DateTime
   referenceNumber String?
   barcodeData     String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   // リレーション
   lot       Lot       @relation(fields: [lotId], references: [id])
@@ -169,16 +169,4 @@ model Allocation {
   lot       Lot       @relation(fields: [lotId], references: [id])
   warehouse Warehouse @relation(fields: [warehouseId], references: [id])
   unit      Unit      @relation(fields: [unitId], references: [id])
-}
-
-// 列挙型
-enum ItemType {
-  MANUFACTURED // 製造品
-  EXTERNAL     // 社外品
-  RAW_MATERIAL // 原材料
-}
-
-enum TransactionType {
-  INBOUND  // 入庫
-  OUTBOUND // 出庫
 }
